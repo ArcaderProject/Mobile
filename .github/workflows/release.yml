@@ -7,10 +7,10 @@ on:
   workflow_dispatch:
     inputs:
       build_name:
-        description: 'Version name (e.g. 1.0.0). Defaults to pubspec value.'
+        description: 'Version name (e.g. 1.2.3). Defaults to the tag / pubspec value.'
         required: false
       build_number:
-        description: 'Build number (versionCode). Defaults to pubspec value.'
+        description: 'Build number (versionCode). Defaults to the workflow run number.'
         required: false
 
 permissions:
@@ -36,6 +36,28 @@ jobs:
           flutter-version: '3.35.5'
           cache: true
 
+      - name: Resolve version
+        run: |
+          NAME="${{ github.event.inputs.build_name }}"
+          if [ -z "$NAME" ] && [ "${{ github.ref_type }}" = "tag" ]; then
+            NAME="${GITHUB_REF_NAME#v}"
+          fi
+          if [ -z "$NAME" ]; then
+            NAME=$(grep '^version:' pubspec.yaml | sed 's/version: *//' | cut -d'+' -f1)
+          fi
+          NUMBER="${{ github.event.inputs.build_number }}"
+          if [ -z "$NUMBER" ]; then
+            NUMBER="${{ github.run_number }}"
+          fi
+          echo "VERSION_NAME=$NAME" >> "$GITHUB_ENV"
+          echo "VERSION_NUMBER=$NUMBER" >> "$GITHUB_ENV"
+          echo "Resolved version: $NAME+$NUMBER"
+
+      - name: Stamp version into pubspec.yaml
+        run: |
+          sed -i "s/^version: .*/version: ${VERSION_NAME}+${VERSION_NUMBER}/" pubspec.yaml
+          grep '^version:' pubspec.yaml
+
       - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -45,22 +67,17 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APKs (split per ABI)
+      - name: Build APKs (split per ABI + universal)
         env:
           KEYSTORE_PATH: ${{ runner.temp }}/upload-keystore.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          EXTRA=""
-          if [ -n "${{ github.event.inputs.build_name }}" ]; then
-            EXTRA="$EXTRA --build-name=${{ github.event.inputs.build_name }}"
-          fi
-          if [ -n "${{ github.event.inputs.build_number }}" ]; then
-            EXTRA="$EXTRA --build-number=${{ github.event.inputs.build_number }}"
-          fi
-          flutter build apk --release --split-per-abi $EXTRA
-          flutter build apk --release $EXTRA
+          flutter build apk --release --split-per-abi \
+            --build-name="$VERSION_NAME" --build-number="$VERSION_NUMBER"
+          flutter build apk --release \
+            --build-name="$VERSION_NAME" --build-number="$VERSION_NUMBER"
 
       - name: Build App Bundle (Play Store)
         env:
@@ -69,14 +86,8 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          EXTRA=""
-          if [ -n "${{ github.event.inputs.build_name }}" ]; then
-            EXTRA="$EXTRA --build-name=${{ github.event.inputs.build_name }}"
-          fi
-          if [ -n "${{ github.event.inputs.build_number }}" ]; then
-            EXTRA="$EXTRA --build-number=${{ github.event.inputs.build_number }}"
-          fi
-          flutter build appbundle --release $EXTRA
+          flutter build appbundle --release \
+            --build-name="$VERSION_NAME" --build-number="$VERSION_NUMBER"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -94,3 +105,18 @@ jobs:
           files: |
             build/app/outputs/flutter-apk/*.apk
             build/app/outputs/bundle/release/*.aab
+
+      - name: Commit version bump to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout main
+          sed -i "s/^version: .*/version: ${VERSION_NAME}+${VERSION_NUMBER}/" pubspec.yaml
+          if git diff --quiet -- pubspec.yaml; then
+            echo "pubspec.yaml already at ${VERSION_NAME}+${VERSION_NUMBER}, nothing to commit."
+          else
+            git add pubspec.yaml
+            git commit -m "chore: release ${VERSION_NAME}+${VERSION_NUMBER} [skip ci]"
+            git push origin main
+          fi
