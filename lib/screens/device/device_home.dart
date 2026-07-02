@@ -7,7 +7,7 @@ import '../../state/device_store.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/ui.dart';
 import 'console_tab.dart';
-import 'games_tab.dart';
+import 'library_tab.dart';
 import 'lists_tab.dart';
 import 'settings_tab.dart';
 import 'storage_tab.dart';
@@ -36,7 +36,7 @@ class _DeviceScaffold extends StatefulWidget {
 class _DeviceScaffoldState extends State<_DeviceScaffold> {
   int _index = 0;
 
-  static const _titles = ['Games', 'Lists', 'Storage', 'Console', 'Settings'];
+  static const _titles = ['Library', 'Lists', 'Storage', 'Console', 'Settings'];
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +79,7 @@ class _DeviceScaffoldState extends State<_DeviceScaffold> {
       body: IndexedStack(
         index: _index,
         children: const [
-          GamesTab(),
+          LibraryTab(),
           ListsTab(),
           StorageTab(),
           ConsoleTab(),
@@ -91,9 +91,9 @@ class _DeviceScaffoldState extends State<_DeviceScaffold> {
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
           NavigationDestination(
-              icon: Icon(Icons.videogame_asset_outlined),
-              selectedIcon: Icon(Icons.videogame_asset),
-              label: 'Games'),
+              icon: Icon(Icons.grid_view_outlined),
+              selectedIcon: Icon(Icons.grid_view),
+              label: 'Library'),
           NavigationDestination(
               icon: Icon(Icons.playlist_play_outlined),
               selectedIcon: Icon(Icons.playlist_play),

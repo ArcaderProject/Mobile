@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../models/app_config.dart';
+import '../models/app_item.dart';
 import '../models/coin_status.dart';
 import '../models/device.dart';
 import '../models/game.dart';
@@ -150,6 +151,26 @@ class ApiClient {
     final streamed = await _http.send(req).timeout(const Duration(minutes: 5));
     final res = await http.Response.fromStream(streamed);
     _decode(res);
+  }
+
+  Future<List<AppItem>> getApps() async {
+    final res = await _get('/apps');
+    return (res as List).map((e) => AppItem.fromJson((e as Map).cast<String, dynamic>())).toList();
+  }
+
+  Future<void> createApp(Map<String, dynamic> body) => _post('/apps', body);
+  Future<void> updateApp(String id, Map<String, dynamic> body) => _put('/apps/$id', body);
+  Future<void> deleteApp(String id) => _delete('/apps/$id');
+  Future<void> launchApp(String id) => _post('/apps/$id/launch');
+  Future<void> reorderApps(List<String> ids) => _post('/apps/reorder', {'order': ids});
+
+  String appIconUrl(String id) => '$_base/apps/$id/icon';
+
+  Future<void> uploadAppIcon(String id, Uint8List bytes, String filename) async {
+    final req = http.MultipartRequest('POST', _uri('/apps/$id/icon'))
+      ..headers.addAll(_authHeaders)
+      ..files.add(http.MultipartFile.fromBytes('icon', bytes, filename: filename));
+    await _sendMultipart(req);
   }
 
   Future<List<GameList>> getLists() async {
