@@ -7,6 +7,7 @@ import '../../state/device_store.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/ui.dart';
 import 'console_tab.dart';
+import 'controllers_tab.dart';
 import 'library_tab.dart';
 import 'lists_tab.dart';
 import 'settings_tab.dart';
@@ -36,7 +37,14 @@ class _DeviceScaffold extends StatefulWidget {
 class _DeviceScaffoldState extends State<_DeviceScaffold> {
   int _index = 0;
 
-  static const _titles = ['Library', 'Lists', 'Storage', 'Console', 'Settings'];
+  static const _titles = [
+    'Library',
+    'Lists',
+    'Controllers',
+    'Storage',
+    'Console',
+    'Settings'
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +89,7 @@ class _DeviceScaffoldState extends State<_DeviceScaffold> {
         children: const [
           LibraryTab(),
           ListsTab(),
+          ControllersTab(),
           StorageTab(),
           ConsoleTab(),
           SettingsTab(),
@@ -98,6 +107,10 @@ class _DeviceScaffoldState extends State<_DeviceScaffold> {
               icon: Icon(Icons.playlist_play_outlined),
               selectedIcon: Icon(Icons.playlist_play),
               label: 'Lists'),
+          NavigationDestination(
+              icon: Icon(Icons.videogame_asset_outlined),
+              selectedIcon: Icon(Icons.videogame_asset),
+              label: 'Controllers'),
           NavigationDestination(
               icon: Icon(Icons.save_outlined),
               selectedIcon: Icon(Icons.save),

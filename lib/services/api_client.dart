@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../models/app_config.dart';
 import '../models/app_item.dart';
 import '../models/coin_status.dart';
+import '../models/controller_profile.dart';
 import '../models/device.dart';
 import '../models/game.dart';
 import '../models/game_list.dart';
@@ -201,6 +202,33 @@ class ApiClient {
 
   Future<void> setListGames(String id, List<String> gameIds) =>
       _put('/lists/$id/games', {'gameIds': gameIds});
+
+  Future<List<ControllerProfile>> getControllerProfiles() async {
+    final res = await _get('/controller-profiles');
+    return (res as List)
+        .map((e) => ControllerProfile.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
+  }
+
+  Future<void> createControllerProfile(String name) =>
+      _post('/controller-profiles', {'name': name});
+  Future<void> renameControllerProfile(String id, String name) =>
+      _put('/controller-profiles/$id', {'name': name});
+  Future<void> deleteControllerProfile(String id) =>
+      _delete('/controller-profiles/$id');
+
+  Future<List<String>> getControllerProfileGameIds(String id) async {
+    final res = await _get('/controller-profiles/$id/games');
+    return ((res as Map)['gameIds'] as List? ?? []).map((e) => e.toString()).toList();
+  }
+
+  Future<void> setControllerProfileGames(String id, List<String> gameIds) =>
+      _put('/controller-profiles/$id/games', {'gameIds': gameIds});
+
+  Future<void> configureControllerProfile(String id) =>
+      _post('/controller-profiles/$id/configure');
+  Future<void> cancelControllerConfigure(String id) =>
+      _post('/controller-profiles/$id/cancel');
 
   Future<List<SaveFolder>> getSaveFolders() async {
     final res = await _get('/save-folders');
